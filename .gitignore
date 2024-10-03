@@ -1,0 +1,43 @@
+# Zephyr build directory
+/build/
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+Makefile
+
+# Generated files
+*.o
+*.d
+*.elf
+*.hex
+*.bin
+*.zip
+
+# IDE specific files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Temporary files
+*.tmp
+*.log
+
+# User-specific files
+*.swp
+*~
+*.bak
+
+# VSCode settings
+.vscode/
+.history/
+
+# West configuration
+west.yml
+
+# python
+.venv
+__pycache__/
+
+# docs
+/doc/_build*
