@@ -1,4 +1,3 @@
-
 # ninjaUSB
 [![CC BY-NC 4.0][cc-by-nc-shield]][cc-by-nc]
 
@@ -12,13 +11,35 @@
 - **USB HID Output**: Sends received keystrokes through USB HID interface.
 - **Future Expansion**: Plans to develop advanced BadUSB functionalities, enhancing the capabilities of the device.
 
-## Development
 
-This project is currently under devlopment checkout **dev** branch to look at lastest devlopment.
+## Getting Started
+
+Before getting started, make sure you have a proper Zephyr development
+environment. Follow the official
+[Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html).
+
+
+## Prerequisite
+
+Clone the project inside workspace directory of Zephyr and init west.
+
+```shell
+cd ~/zephyr-workspace
+git clone https://github.com/mr-u0b0dy/ninjaUSB.git
+cd ninjaUSB
+```
+
+### Building and running
+
+To build the application, run the following command:
+
+```shell
+west build -b nrf52840dongle/nrf52840 app
+```
 
 ## Contributing
 
-We welcome contributions to the **ninjaUSB** project! Here’s how you can help:
+We welcome contributions to the **ninjaUSB** project! 
 
 ## License
 

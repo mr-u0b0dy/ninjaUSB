@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(ninjaUSB)
 
 project(app LANGUAGES C)
-set(BOARD nrf52840dk/nrf52840)
 
 target_sources(app PRIVATE src/main.c)
