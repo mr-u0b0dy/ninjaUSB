@@ -37,6 +37,17 @@ To build the application, run the following command:
 west build -b nrf52840dongle/nrf52840 app
 ```
 
+### Flashing
+
+To sign and flash the firmware assuming that your device is available at `/dev/ttyACM0`, run the following command:
+
+
+```shell
+nrfutil pkg generate --hw-version 52 --sd-req=0x00 \
+        --application build/zephyr/zephyr.hex \
+        --application-version 1 firmware.zip
+nrfutil dfu usb-serial -pkg firmware.zip -p /dev/ttyACM0
+```
 ## Contributing
 
 We welcome contributions to the **ninjaUSB** project! 
