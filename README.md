@@ -18,7 +18,7 @@ This project is currently under devlopment checkout **dev** branch to look at la
 
 ## Contributing
 
-We welcome contributions to the **ninjaUSB** project! Here’s how you can help:
+We welcome contributions to the **ninjaUSB** project!
 
 ## License
 
