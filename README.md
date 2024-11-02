@@ -17,7 +17,7 @@
 Before getting started, make sure you have a proper Zephyr development
 environment. Follow the official
 [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html).
-
+Get `nrfutil` from [here](https://www.nordicsemi.com/Products/Development-tools/nrf-util)
 
 ## Prerequisite
 
@@ -45,8 +45,8 @@ To sign and flash the firmware assuming that your device is available at `/dev/t
 ```shell
 nrfutil pkg generate --hw-version 52 --sd-req=0x00 \
         --application build/zephyr/zephyr.hex \
-        --application-version 1 firmware.zip
-nrfutil dfu usb-serial -pkg firmware.zip -p /dev/ttyACM0
+        --application-version 1 build/firmware.zip
+nrfutil dfu usb-serial -pkg build/firmware.zip -p /dev/ttyACM0
 ```
 ## Contributing
 
