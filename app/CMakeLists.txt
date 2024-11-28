@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.20)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(ninjaUSB)
 
-project(app LANGUAGES C)
+file(GLOB SRC_FILES "src/*.c")
 
-target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE ${SRC_FILES})
