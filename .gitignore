@@ -1,5 +1,6 @@
 # Zephyr build directory
 /build/
+
 # CMake files
 CMakeCache.txt
 CMakeFiles/
@@ -35,9 +36,36 @@ Makefile
 # West configuration
 west.yml
 
-# python
+# Python
 .venv
 __pycache__/
 
-# docs
+# Docs
 /doc/_build*
+
+# Cache files
+.cache/
+
+# Tags
+tags
+
+# Vim swap files
+*.swp
+
+# Vim backup files
+*.bak
+*.bck
+
+# Neovim swap files
+*.swp
+*.swo
+*.swn
+
+# Neovim backup files
+*.bak
+*.bck
+
+# Clangd related files
+.compile_commands.json
+.clangd/
+
