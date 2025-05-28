@@ -64,6 +64,11 @@ static const struct usb_bos_capability_lpm bos_cap_lpm = {
 	.bmAttributes = 0UL,
 };
 
+static const char *const blocklist[] = {
+        "dfu_dfu",
+        NULL,
+};
+
 USBD_DESC_BOS_DEFINE(usbnext, sizeof(bos_cap_lpm), &bos_cap_lpm);
 
 static void app_fix_code_triple(struct usbd_context *uds_ctx,
@@ -143,7 +148,7 @@ struct usbd_context *usbd_inst_setup_device(usbd_msg_cb_t msg_cb)
 	/* doc configuration register end */
 
 	/* doc functions register start */
-	err = usbd_register_all_classes(&usbd_inst, USBD_SPEED_FS, 1);
+	err = usbd_register_all_classes(&usbd_inst, USBD_SPEED_FS, 1, blocklist);
 	if (err) {
 		LOG_ERR("Failed to add register classes");
 		return NULL;
