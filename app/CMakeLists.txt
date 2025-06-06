@@ -6,4 +6,6 @@ project(ninjaUSB)
 
 file(GLOB SRC_FILES "src/*.c")
 
+zephyr_include_directories(inc)
+
 target_sources(app PRIVATE ${SRC_FILES})
