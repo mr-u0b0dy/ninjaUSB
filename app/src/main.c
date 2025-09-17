@@ -17,6 +17,8 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
 
+#include <zephyr/settings/settings.h>
+
 #include <zephyr/usb/class/usbd_hid.h>
 #include <zephyr/usb/usbd.h>
 
@@ -215,6 +217,7 @@ static const struct bt_data ad[] = {
     BT_DATA_BYTES(
         BT_DATA_FLAGS,
         (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)), /* Set the advertising flags */
+    BT_DATA_BYTES(BT_DATA_UUID16_ALL, 0x12, 0x18), /* Advertise HID Service UUID */
     BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME,
             sizeof(CONFIG_BT_DEVICE_NAME) - 1),
     /* Set the advertising packet data  */};
@@ -267,6 +270,28 @@ BT_CONN_CB_DEFINE(connection_callbacks) = {
     .connected = connected_cb,
     .disconnected = disconnected_cb,
     .recycled = recycled_cb,
+};
+
+/* Authentication callbacks for bonding support */
+static void auth_cancel(struct bt_conn *conn)
+{
+	LOG_INF("Pairing cancelled");
+}
+
+static void auth_pairing_complete(struct bt_conn *conn, bool bonded)
+{
+	LOG_INF("Pairing completed %s", bonded ? "and bonded" : "but not bonded");
+}
+
+static void auth_pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	LOG_ERR("Pairing failed (reason %d)", reason);
+}
+
+static struct bt_conn_auth_cb auth_cb = {
+	.cancel = auth_cancel,
+	.pairing_complete = auth_pairing_complete,
+	.pairing_failed = auth_pairing_failed,
 };
 
 int main(void) {
@@ -333,6 +358,18 @@ int main(void) {
   if (ret) {
     LOG_ERR("Bluetooth init failed (err %d)\n", ret);
     return -1;
+  }
+
+  /* Load stored settings for bonding */
+  ret = settings_load();
+  if (ret) {
+    LOG_WRN("Settings load failed (err %d)", ret);
+  }
+
+  /* Register authentication callbacks for bonding support */
+  ret = bt_conn_auth_cb_register(&auth_cb);
+  if (ret) {
+    LOG_ERR("Failed to register auth callbacks (err %d)", ret);
   }
 
   /* Start connectable advertising */
