@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -167,27 +166,42 @@ static struct bt_uuid_128 custom_service_uuid =
 static struct bt_uuid_128 cmd_char_uuid =
     BT_UUID_INIT_128(BT_UUID_CMD_CHAR_VAL);
 
-static uint8_t command_buf[20];
+/* BLE write payload will directly overwrite the HID report buffer ("raw
+ * pass-through"). */
 
 ssize_t write_command(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                       const void *buf, uint16_t len, uint16_t offset,
                       uint8_t flags) {
-  if (len > sizeof(command_buf)) {
+  ARG_UNUSED(conn);
+  ARG_UNUSED(attr);
+  ARG_UNUSED(offset);
+  ARG_UNUSED(flags);
+
+  /* Expect raw HID keyboard report bytes from BLE. The standard keyboard
+   * report is KB_REPORT_COUNT bytes (modifier, reserved, 6 keycodes). If
+   * fewer bytes are provided we zero-fill the remainder. If more are sent
+   * we reject to avoid accidental overflow / unintended state.
+   */
+  if (len > KB_REPORT_COUNT) {
     return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
   }
 
-  memcpy(command_buf, buf, len);
-  printk("Received command: ");
-  for (int i = 0; i < len; i++) {
-    printk("%02x ", command_buf[i]);
-  }
-  printk("\n");
+  /* Clear existing report then copy provided bytes */
+  memset(report, 0, KB_REPORT_COUNT);
+  memcpy(report, buf, len);
 
-  if (command_buf[0] == 1) {
-    report[KB_KEY_CODE1] = HID_KEY_NUMLOCK;
-    hid_device_submit_report(hid_dev, KB_REPORT_COUNT, report);
+  LOG_INF("BLE raw HID report write (%u bytes)", len);
+  LOG_HEXDUMP_DBG(report, KB_REPORT_COUNT, "hid-rx");
+
+  if (!kb_ready) {
+    LOG_WRN("HID interface not ready; dropping report");
+    return len; /* Return len so GATT write appears successful */
   }
 
+  int ret = hid_device_submit_report(hid_dev, KB_REPORT_COUNT, report);
+  if (ret) {
+    LOG_ERR("Failed to submit HID report (%d)", ret);
+  }
   return len;
 }
 
