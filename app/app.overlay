@@ -1,4 +1,13 @@
 / {
+	chosen {
+		/* Route Zephyr console/shell over physical UART0 instead of USB CDC ACM */
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+		zephyr,uart-mcumgr = &uart0;
+		zephyr,bt-mon-uart = &uart0;
+		zephyr,bt-c2h-uart = &uart0;
+	};
+
 	hid_dev_0: hid_dev_0 {
 		compatible = "zephyr,hid-device";
 		label = "HID0";
