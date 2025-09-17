@@ -17,6 +17,8 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
 
+#include <zephyr/settings/settings.h>
+
 #include <zephyr/usb/class/usbd_hid.h>
 #include <zephyr/usb/usbd.h>
 
@@ -156,43 +158,52 @@ static void msg_cb(struct usbd_context *const usbd_ctx,
 /*	BLE
  */
 /************************************************************************/
-#define BT_UUID_CUSTOM_SERVICE_VAL                                             \
-  BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef0)
-
+/* Switch to standard HID Service UUID (0x1812) for the primary service. */
 #define BT_UUID_CMD_CHAR_VAL                                                   \
   BT_UUID_128_ENCODE(0xabcdef01, 0x2345, 0x6789, 0x2345, 0x6789abcdef01)
-
-static struct bt_uuid_128 custom_service_uuid =
-    BT_UUID_INIT_128(BT_UUID_CUSTOM_SERVICE_VAL);
 static struct bt_uuid_128 cmd_char_uuid =
     BT_UUID_INIT_128(BT_UUID_CMD_CHAR_VAL);
 
-static uint8_t command_buf[20];
+/* BLE write payload will directly overwrite the HID report buffer ("raw pass-through"). */
 
 ssize_t write_command(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                       const void *buf, uint16_t len, uint16_t offset,
                       uint8_t flags) {
-  if (len > sizeof(command_buf)) {
+  ARG_UNUSED(conn);
+  ARG_UNUSED(attr);
+  ARG_UNUSED(offset);
+  ARG_UNUSED(flags);
+
+  /* Expect raw HID keyboard report bytes from BLE. The standard keyboard
+   * report is KB_REPORT_COUNT bytes (modifier, reserved, 6 keycodes). If
+   * fewer bytes are provided we zero-fill the remainder. If more are sent
+   * we reject to avoid accidental overflow / unintended state.
+   */
+  if (len > KB_REPORT_COUNT) {
     return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
   }
 
-  memcpy(command_buf, buf, len);
-  printk("Received command: ");
-  for (int i = 0; i < len; i++) {
-    printk("%02x ", command_buf[i]);
-  }
-  printk("\n");
+  /* Clear existing report then copy provided bytes */
+  memset(report, 0, KB_REPORT_COUNT);
+  memcpy(report, buf, len);
 
-  if (command_buf[0] == 1) {
-    report[KB_KEY_CODE1] = HID_KEY_NUMLOCK;
-    hid_device_submit_report(hid_dev, KB_REPORT_COUNT, report);
+  LOG_INF("BLE raw HID report write (%u bytes)", len);
+  LOG_HEXDUMP_DBG(report, KB_REPORT_COUNT, "hid-rx");
+
+  if (!kb_ready) {
+    LOG_WRN("HID interface not ready; dropping report");
+    return len; /* Return len so GATT write appears successful */
   }
 
+  int ret = hid_device_submit_report(hid_dev, KB_REPORT_COUNT, report);
+  if (ret) {
+    LOG_ERR("Failed to submit HID report (%d)", ret);
+  }
   return len;
 }
 
 BT_GATT_SERVICE_DEFINE(
-    custom_svc, BT_GATT_PRIMARY_SERVICE(&custom_service_uuid),
+  custom_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_HIDS),
     BT_GATT_CHARACTERISTIC(&cmd_char_uuid.uuid, BT_GATT_CHRC_WRITE,
                            BT_GATT_PERM_WRITE, NULL, write_command, NULL), );
 
@@ -206,6 +217,7 @@ static const struct bt_data ad[] = {
     BT_DATA_BYTES(
         BT_DATA_FLAGS,
         (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)), /* Set the advertising flags */
+    BT_DATA_BYTES(BT_DATA_UUID16_ALL, 0x12, 0x18), /* Advertise HID Service UUID */
     BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME,
             sizeof(CONFIG_BT_DEVICE_NAME) - 1),
     /* Set the advertising packet data  */};
@@ -258,6 +270,28 @@ BT_CONN_CB_DEFINE(connection_callbacks) = {
     .connected = connected_cb,
     .disconnected = disconnected_cb,
     .recycled = recycled_cb,
+};
+
+/* Authentication callbacks for bonding support */
+static void auth_cancel(struct bt_conn *conn)
+{
+	LOG_INF("Pairing cancelled");
+}
+
+static void auth_pairing_complete(struct bt_conn *conn, bool bonded)
+{
+	LOG_INF("Pairing completed %s", bonded ? "and bonded" : "but not bonded");
+}
+
+static void auth_pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	LOG_ERR("Pairing failed (reason %d)", reason);
+}
+
+static struct bt_conn_auth_cb auth_cb = {
+	.cancel = auth_cancel,
+	.pairing_complete = auth_pairing_complete,
+	.pairing_failed = auth_pairing_failed,
 };
 
 int main(void) {
@@ -324,6 +358,18 @@ int main(void) {
   if (ret) {
     LOG_ERR("Bluetooth init failed (err %d)\n", ret);
     return -1;
+  }
+
+  /* Load stored settings for bonding */
+  ret = settings_load();
+  if (ret) {
+    LOG_WRN("Settings load failed (err %d)", ret);
+  }
+
+  /* Register authentication callbacks for bonding support */
+  ret = bt_conn_auth_cb_register(&auth_cb);
+  if (ret) {
+    LOG_ERR("Failed to register auth callbacks (err %d)", ret);
   }
 
   /* Start connectable advertising */
